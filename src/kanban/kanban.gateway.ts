@@ -64,7 +64,6 @@ export class KanbanGateway {
     const task = await this.prisma.task.update({
       where: { id: payload.id },
       data: {
-        status: payload.status,
         title: payload.title,
         description: payload.description,
       },
