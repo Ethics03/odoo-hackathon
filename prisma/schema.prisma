@@ -26,7 +26,7 @@ model User {
 
 model Project {
   id        String          @id @default(uuid())
-  name      String
+  name      String          @unique
   members   ProjectMember[]
   tasks     Task[]
   createdAt DateTime        @default(now())
