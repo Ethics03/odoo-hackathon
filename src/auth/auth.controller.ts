@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   Post,
   Req,
@@ -11,9 +12,11 @@ import { ApiOperation } from '@nestjs/swagger';
 import { Request } from 'express';
 import { CreateUserDTO } from './dto/auth.dto';
 import { AuthService } from './auth.service';
+import { Public } from './decorators/clerk.decorator';
 
 @Controller('auth')
 export class AuthController {
+  logger = new Logger(AuthController.name);
   constructor(private readonly authservice: AuthService) {}
   @Post('test')
   @ApiOperation({ summary: 'testing bro' })
@@ -24,19 +27,18 @@ export class AuthController {
   }
 
   @Post('sign-up')
+  @Public()
   @ApiOperation({ summary: 'Creating User in DB' })
   async createUser(@Body() payload: CreateUserDTO) {
-    try {
-      const user = await this.authservice.createUser(payload);
-      return user;
-    } catch (error) {
-      throw error;
-    }
+    this.logger.log('hit create');
+    const user = await this.authservice.createUser(payload);
+    return user;
   }
 
   @Get('user/:email')
   @ApiOperation({ summary: 'Getting User by Email' })
   async findUserByEmail(@Param('email') email: string) {
+    this.logger.log('hit by email');
     if (!email) {
       throw new BadRequestException('Email is required');
     }
@@ -46,6 +48,7 @@ export class AuthController {
   @Get('login')
   @ApiOperation({ summary: 'Logging in user' })
   login(@Req() req: Request & { user: any }) {
+    this.logger.log('hit by login');
     const user = req.user;
     return {
       message: 'User authenticated successfully',
