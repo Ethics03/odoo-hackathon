@@ -1,11 +1,5 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDTO } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -15,48 +9,57 @@ export class AuthService {
   async findUserByEmail(email: string) {
     return await this.prisma.user.findUnique({
       where: { email },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        createdAt: true,
-      },
     });
   }
 
   async loginOrSignup(clerkUser: any, email: string) {
-    this.logger.log(`Checking DB for user with email: ${email}`);
-    const existingUser = await this.findUserByEmail(email);
+    this.logger.log(`Processing login/signup for email: ${email}`);
+
+    let existingUser = await this.findUserByEmail(email);
+    let isNewUser = false;
 
     if (!existingUser) {
-      this.logger.log(`User not found. Creating new user with email: ${email}`);
+      this.logger.log(`User with email ${email} not found, creating new user`);
       try {
-        const newUser = await this.prisma.user.create({
-          data: {
-            username: clerkUser.username || `user_${clerkUser.id}`,
-            email,
-          },
-        });
-
-        this.logger.log(`User created successfully: ${newUser.id}`);
-        return {
-          message: 'User created successfully',
-          user: newUser,
+        const userData = {
+          email: email,
+          username:
+            clerkUser.username ||
+            clerkUser.firstName ||
+            clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] ||
+            `user_${clerkUser.id}`,
         };
-      } catch (err) {
-        this.logger.error(`Error creating user: ${err.message}`, err.stack);
-        throw new BadRequestException('Failed to create user');
+
+        existingUser = await this.createUser(userData);
+        isNewUser = true;
+        this.logger.log(`New user created for email: ${email}`);
+      } catch (error) {
+        this.logger.error(`Failed to create user: ${error.message}`);
+        throw new BadRequestException(`User creation failed: ${error.message}`);
       }
+    } else {
+      this.logger.log(`Existing user found for email: ${email}`);
     }
 
-    this.logger.log(`User already exists: ${existingUser.id}`);
     return {
-      message: 'User authenticated successfully',
-      user: {
-        id: clerkUser.id,
-        email,
-        username: clerkUser.username || existingUser.username,
+      success: true,
+      userData: {
+        id: existingUser.id,
+        email: existingUser.email,
+        username: existingUser.username,
+        createdAt: existingUser.createdAt,
       },
+      isNewUser,
     };
+  }
+
+  async createUser(userData: {
+    email: string;
+    username: string;
+    [key: string]: any;
+  }) {
+    return await this.prisma.user.create({
+      data: userData,
+    });
   }
 }
