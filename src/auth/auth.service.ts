@@ -1,5 +1,5 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "src/prisma/prisma.service";
 
 @Injectable()
 export class AuthService {
@@ -26,7 +26,7 @@ export class AuthService {
           username:
             clerkUser.username ||
             clerkUser.firstName ||
-            clerkUser.emailAddresses?.[0]?.emailAddress?.split('@')[0] ||
+            clerkUser.emailAddresses?.[0]?.emailAddress?.split("@")[0] ||
             `user_${clerkUser.id}`,
         };
 
