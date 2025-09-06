@@ -2,45 +2,15 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDTO } from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
+  logger = new Logger(AuthService.name);
   constructor(private readonly prisma: PrismaService) {}
-
-  async createUser(payload: CreateUserDTO) {
-    try {
-      if (!payload.email || !payload.username) {
-        throw new BadRequestException('Username and email is required');
-      }
-
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: payload.email },
-      });
-      if (existingUser) {
-        throw new ConflictException('User already exists');
-      }
-
-      const user = await this.prisma.user.create({
-        data: {
-          username: payload.username,
-          email: payload.email,
-        },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          createdAt: true,
-        },
-      });
-      return user;
-    } catch (error) {
-      console.error('Error creating user:', error);
-      throw new BadRequestException('Failed to create user');
-    }
-  }
 
   async findUserByEmail(email: string) {
     return await this.prisma.user.findUnique({
@@ -52,5 +22,41 @@ export class AuthService {
         createdAt: true,
       },
     });
+  }
+
+  async loginOrSignup(clerkUser: any, email: string) {
+    this.logger.log(`Checking DB for user with email: ${email}`);
+    const existingUser = await this.findUserByEmail(email);
+
+    if (!existingUser) {
+      this.logger.log(`User not found. Creating new user with email: ${email}`);
+      try {
+        const newUser = await this.prisma.user.create({
+          data: {
+            username: clerkUser.username || `user_${clerkUser.id}`,
+            email,
+          },
+        });
+
+        this.logger.log(`User created successfully: ${newUser.id}`);
+        return {
+          message: 'User created successfully',
+          user: newUser,
+        };
+      } catch (err) {
+        this.logger.error(`Error creating user: ${err.message}`, err.stack);
+        throw new BadRequestException('Failed to create user');
+      }
+    }
+
+    this.logger.log(`User already exists: ${existingUser.id}`);
+    return {
+      message: 'User authenticated successfully',
+      user: {
+        id: clerkUser.id,
+        email,
+        username: clerkUser.username || existingUser.username,
+      },
+    };
   }
 }
