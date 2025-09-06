@@ -12,6 +12,12 @@ import { ConfigModule } from '@nestjs/config';
   imports: [PassportModule, ConfigModule],
   providers: [AuthService, PrismaService, ClerkStrategy, ClerkClientProvider],
   controllers: [AuthController],
-  exports: [PassportModule],
+  exports: [
+    PassportModule,
+    AuthService,
+    ClerkStrategy,
+    ClerkClientProvider,
+    PrismaService,
+  ],
 })
 export class AuthModule {}
